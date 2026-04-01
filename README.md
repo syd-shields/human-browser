@@ -71,14 +71,45 @@ Set `RESEND_WEBHOOK_SECRET` in **Project → Settings → Environment Variables*
 
 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs on every push and pull request to **`main`**. It runs **Prettier** (`format:check`), **ESLint**, **TypeScript**, and a **production build** with a frozen lockfile.
 
-**Recommended GitHub settings**
-
-1. **Rulesets** (Settings → Rules → Rulesets): add a branch ruleset for `main` that **requires status checks** and select **`CI / Quality`**. Optionally require a pull request before merging.
-2. **Dependabot** is enabled via [`.github/dependabot.yml`](./.github/dependabot.yml) for npm and GitHub Actions.
+**Dependabot** is configured in [`.github/dependabot.yml`](./.github/dependabot.yml) for npm and GitHub Actions.
 
 **Vercel**
 
 Connect this repository to your **human-browser** Vercel project so **Preview** deployments run on pull requests and **Production** (`main`) serves **`dev.humanbrowser.com`**. Use **Deployment Protection** under the Vercel project if you want previews gated behind login or password.
+
+**GitHub Actions billing**
+
+Hosted runners only run if your GitHub account can use Actions (for example, no billing lock on the account). If a workflow fails immediately with no steps and an annotation about billing, fix that in [GitHub billing settings](https://github.com/settings/billing) first.
+
+**Enforcing CI on `main` after Actions are green**
+
+Once `CI / Quality` has completed successfully at least once, add a branch ruleset: **Settings → Rules → Rulesets → New ruleset** → target `main` → enable **Require status checks** → add check **`CI / Quality`**, and turn on **Require branches to be up to date before merging** if you want strict sync with `main`.
+
+Alternatively, from a machine with the GitHub CLI:
+
+```bash
+gh api --method POST repos/OWNER/REPO/rulesets --input - <<'EOF'
+{
+  "name": "Protect main: require CI",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": { "include": ["refs/heads/main"], "exclude": [] }
+  },
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "required_status_checks": [{ "context": "CI / Quality" }]
+      }
+    }
+  ]
+}
+EOF
+```
+
+Replace `OWNER/REPO` (for example `syd-shields/human-browser`). Do not enable this until Actions runs successfully, or pushes to `main` may be blocked waiting for a check that never starts.
 
 ## Contributing
 
