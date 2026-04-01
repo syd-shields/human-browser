@@ -1,135 +1,89 @@
-# Turborepo starter
+# Human Browser
 
-This Turborepo starter is maintained by the Turborepo core team.
+Open-source monorepo for **Human Browser**: a [Next.js](https://nextjs.org/) app with inbound email handling via [Resend](https://resend.com/) webhooks.
 
-## Using this example
+## What’s in the repo
 
-Run the following command:
+| Path                         | Purpose                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| `apps/web`                   | Next.js 15 app (App Router, TypeScript, Tailwind). Production deploy target for Vercel. |
+| `packages/ui`                | Shared React component library (`@repo/ui`).                                            |
+| `packages/eslint-config`     | Shared ESLint flat config (`@repo/eslint-config`).                                      |
+| `packages/typescript-config` | Shared TypeScript bases (`@repo/typescript-config`).                                    |
 
-```sh
-npx create-turbo@latest
+The web app exposes `POST /api/webhooks/resend`, which verifies [Svix-signed](https://docs.svix.com/receiving/verifying-payloads/how) Resend webhooks and processes inbound mail addressed to **`upload@humanbrowser.com`**. Payloads are metadata-only; fetch full content with the [Received Email API](https://resend.com/docs/api-reference/emails/retrieve-received-email) when you need bodies or attachments.
+
+## Requirements
+
+- [Node.js](https://nodejs.org/) 18+
+- [pnpm](https://pnpm.io/) 9 (`packageManager` is pinned in `package.json`)
+
+## Development
+
+```bash
+pnpm install
+pnpm dev
 ```
 
-## What's inside?
+Run only the web app:
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```bash
+pnpm --filter web dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+Other root scripts:
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+| Script              | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `pnpm build`        | Turborepo build (all packages that define `build`). |
+| `pnpm lint`         | ESLint across the workspace.                        |
+| `pnpm check-types`  | TypeScript `tsc --noEmit` via Turborepo.            |
+| `pnpm format`       | Prettier write (`*.ts`, `*.tsx`, `*.md`).           |
+| `pnpm format:check` | Prettier check (used in CI).                        |
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Environment variables
 
-### Develop
+Copy `apps/web/.env.example` to `apps/web/.env.local` for local development.
 
-To develop all apps and packages, run the following command:
+| Variable                | Used for                                                                    |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `RESEND_WEBHOOK_SECRET` | Verifying inbound webhook signatures from Resend.                           |
+| `RESEND_UPLOAD_INBOX`   | Optional. Address matched against `to` (default `upload@humanbrowser.com`). |
 
-```
-cd my-turborepo
+Configure the webhook URL and signing secret in the [Resend Webhooks dashboard](https://resend.com/webhooks). Subscribe to **`email.received`**. See [Receiving emails](https://resend.com/docs/dashboard/receiving/introduction) and [Verify webhooks](https://resend.com/docs/webhooks/verify-webhooks-requests).
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+## Deployment (Vercel)
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+Production for this project is intended at **`dev.humanbrowser.com`**, deployed from the **`main`** branch.
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+1. In [Vercel](https://vercel.com/), open the **human-browser** project (or import this Git repository if it is not linked yet).
+2. **Root Directory**: `apps/web`
+3. **Install Command**: `cd ../.. && pnpm install --frozen-lockfile`
+4. **Build Command**: leave default (`next build`) or `pnpm exec next build --turbopack` if you prefer explicit parity with local builds.
+5. **Framework Preset**: Next.js (auto-detected from `apps/web`).
+6. Under **Settings → Domains**, add **`dev.humanbrowser.com`** and assign it to **Production** (so it tracks `main`).
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+Pull requests against the linked GitHub repository automatically get **Vercel Preview Deployments** once the integration is enabled (default for Git-connected projects). You can tighten preview access under **Project → Settings → Deployment Protection** (e.g. Vercel Authentication or password protection for previews).
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+Set `RESEND_WEBHOOK_SECRET` in **Project → Settings → Environment Variables** for Production (and Preview if you test webhooks against preview URLs via a tunnel or Resend’s replay tools).
 
-### Remote Caching
+## CI and repository protections
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs on every push and pull request to **`main`**. It runs **Prettier** (`format:check`), **ESLint**, **TypeScript**, and a **production build** with a frozen lockfile.
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+**Recommended GitHub settings**
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+1. **Rulesets** (Settings → Rules → Rulesets): add a branch ruleset for `main` that **requires status checks** and select **`CI / Quality`**. Optionally require a pull request before merging.
+2. **Dependabot** is enabled via [`.github/dependabot.yml`](./.github/dependabot.yml) for npm and GitHub Actions.
 
-```
-cd my-turborepo
+**Vercel**
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
+Connect this repository to your **human-browser** Vercel project so **Preview** deployments run on pull requests and **Production** (`main`) serves **`dev.humanbrowser.com`**. Use **Deployment Protection** under the Vercel project if you want previews gated behind login or password.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
+## Contributing
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+Issues and pull requests are welcome. Please run `pnpm format`, `pnpm lint`, and `pnpm check-types` before opening a PR.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## License
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+MIT — see [LICENSE](./LICENSE).

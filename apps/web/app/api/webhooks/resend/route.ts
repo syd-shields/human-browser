@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
 
-/** Inbound address to handle; route other recipients with 200 + skip to avoid retries. */
-const UPLOAD_INBOX = process.env.RESEND_UPLOAD_INBOX;
+/** Inbound address to handle; override with RESEND_UPLOAD_INBOX if needed. */
+const UPLOAD_INBOX =
+  process.env.RESEND_UPLOAD_INBOX ?? "upload@humanbrowser.com";
 
 type EmailReceivedEvent = {
   type: string;
@@ -37,7 +38,9 @@ function isValidRecipient(
 export async function POST(request: NextRequest) {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
   if (!secret) {
-    console.error("[api/webhooks/resend] Webhook signing secret not configured");
+    console.error(
+      "[api/webhooks/resend] Webhook signing secret not configured",
+    );
     return new NextResponse("Webhook signing secret not configured", {
       status: 503,
     });
@@ -76,7 +79,10 @@ export async function POST(request: NextRequest) {
 
   const to = event.data?.to;
   if (!isValidRecipient(to, UPLOAD_INBOX)) {
-    console.info("[api/webhooks/resend] Could not find recipient in inbox for upload@humanbrowser.com. Recipient: ", to);
+    console.info(
+      "[api/webhooks/resend] Could not find recipient in inbox for upload@humanbrowser.com. Recipient: ",
+      to,
+    );
     return NextResponse.json({
       ok: true,
       skipped: true,
@@ -84,7 +90,10 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  console.info("[api/webhooks/resend] Found recipient in inbox for upload@humanbrowser.com. Recipient: ", to);
+  console.info(
+    "[api/webhooks/resend] Found recipient in inbox for upload@humanbrowser.com. Recipient: ",
+    to,
+  );
   // Metadata only in the webhook; fetch body/attachments via Received Email API:
   // https://resend.com/docs/api-reference/emails/retrieve-received-email
   return NextResponse.json({
