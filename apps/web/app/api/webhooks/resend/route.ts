@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
 
-/** Inbound address to handle; override with RESEND_UPLOAD_INBOX if needed. */
+/** Inbound address to handle; override with RESEND_UPLOAD_INBOX. */
 const UPLOAD_INBOX =
   process.env.RESEND_UPLOAD_INBOX ?? "upload@humanbrowser.com";
 
